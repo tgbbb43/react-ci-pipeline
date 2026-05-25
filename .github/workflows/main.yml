@@ -1,39 +1,41 @@
-name: CI
+name: CI Pipeline
 
 on:
   push:
-  workflow_dispatch:  # שלב 8: מאפשר להריץ את ה-Pipeline ידנית
+    branches:
+      - main
+      - develop
+    paths:
+      - 'src/**'
+      - 'tests/**'
+  
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - 'src/**'
+      - 'tests/**'
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm install
-      - run: npm test
-      # שלב 9: הדפסת פרטי ה-GitHub
-      - run: |
-          echo "Repository: ${{ github.repository }}"
-          echo "Branch: ${{ github.ref }}"
-          echo "Workflow: ${{ github.workflow }}"
-          echo "Actor: ${{ github.actor }}"
-
-  build:
-    needs: test  # שלב 6: Build רץ רק אחרי Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-      - run: npm install
-      - run: npm run build
-
-  deploy:
-    needs: build  # שלב 7: Deploy רץ רק אחרי Build
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Deploying application..."
-      - run: sleep 3
-      - run: echo "Deployment completed"
+      - name: Install dependencies
+        run: npm install
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+      - name: Test
+        run: npm test
