@@ -1,26 +1,16 @@
-name: CI Pipeline
+name: CI Pipeline # שם ה-Workflow כפי שיופיע בטאב ה-Actions
 
-on:
+on: # הגדרת האירועים שמפעילים את ה-Workflow
   push:
-    branches:
-      - main
-      - develop
-    paths:
-      - 'src/**'
-      - 'tests/**'
+    branches: [main, develop] # ירוץ רק ב-push לענפים אלו
+    paths: ['src/**', 'tests/**'] # ירוץ רק אם השתנו קבצים בתיקיות אלו
   
   pull_request:
-    branches:
-      - main
-    types:
-      - opened
-      - synchronize
-      - reopened
-    paths:
-      - 'src/**'
-      - 'tests/**'
+    branches: [main] # ירוץ רק אם היעד הוא ענף ה-main
+    types: [opened, synchronize, reopened] # מופעל בפתיחה, עדכון קוד או פתיחה מחדש
+    paths: ['src/**', 'tests/**'] # ירוץ רק אם השתנו קבצים בתיקיות אלו
 
-  workflow_dispatch:
+  workflow_dispatch: # מאפשר להריץ את ה-Workflow ידנית מהממשק
     inputs:
       environment:
         description: 'Target environment'
@@ -31,39 +21,35 @@ on:
         required: false
         default: 'false'
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+concurrency: # מנגנון למניעת הרצות כפולות
+  group: ${{ github.workflow }}-${{ github.ref }} # יצירת קבוצה לפי שם ה-Workflow והענף
+  cancel-in-progress: true # ביטול הרצה קודמת אם הופעלה חדשה על אותו ענף
 
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm ci
-      - run: npm run lint
+      - uses: actions/checkout@v4 # משיכת הקוד מהריפוזיטורי
+      - uses: actions/setup-node@v4 # הגדרת סביבת Node.js
+        with: {node-version: '20'}
+      - run: npm ci # התקנת חבילות (יעיל יותר מ-install ב-CI)
+      - run: npm run lint # הרצת הבדיקה הסטטית
 
   test:
     runs-on: ubuntu-latest
-    if: github.event.inputs.skip_tests != 'true'
+    if: github.event.inputs.skip_tests != 'true' # דילוג על ג'וב זה אם המשתמש בחר ב-skip_tests
     steps:
       - uses: actions/checkout@v4
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+      - uses: actions/setup-node@v4
+        with: {node-version: '20'}
       - run: npm ci
-      - run: npm test
+      - run: npm test # הרצת בדיקות יחידה
 
   summary:
-    needs: [lint, test]
+    needs: [lint, test] # ירוץ רק לאחר שהג'ובים lint ו-test הסתיימו בהצלחה
     runs-on: ubuntu-latest
     steps:
       - name: Print Summary
         run: |
           echo "CI Pipeline completed successfully."
-          echo "Selected Environment: ${{ github.event.inputs.environment || 'N/A (Push/PR)' }}"
+          echo "Selected Environment: ${{ github.event.inputs.environment || 'N/A' }}"
